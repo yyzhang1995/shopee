@@ -1,0 +1,14 @@
+Mon Apr 26 00:04:00 2021
+  valid set number: 625 
+accuracy: 41.760 
+precision rate: 0.286 
+recall rate: 0.284 
+f1 score: 0.279 
+
+Mon Apr 26 00:10:08 2021
+valid set number: 625 
+accuracy: 39.840 
+precision rate: 0.303 
+recall rate: 0.307 
+f1 score: 0.299 
+
