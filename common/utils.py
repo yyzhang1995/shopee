@@ -1,5 +1,42 @@
-import torch
+import torch, torchvision
 import re
+from torch.utils.data import Dataset
+from PIL import Image
+from torchvision import transforms
+import matplotlib.pyplot as plt
+
+
+class ShopeeData(Dataset):
+    def __init__(self, img_path, imgs, annotations, resize, aug=None):
+        self.img_path = img_path
+        self.imgs = imgs
+        self.annotations = annotations
+        self.aug = aug
+        self.resize = resize
+        # features = []
+        # pre_trans = transforms.Compose([transforms.ToTensor(),
+        #                                 transforms.Resize((resize, resize))])
+        # for i in range(len(imgs)):
+        #     if (i + 1) % 1000 == 0: print("loaded " + str(i + 1) + " photo")
+        #     img = Image.open(img_path + "\\" + imgs[i]).copy()
+        #     if pre_transform:
+        #         features.append(pre_trans(img))
+        #     else:
+        #         features.append(transforms.ToTensor()(img))
+        # self.features = features
+
+    def __len__(self):
+        return len(self.imgs)
+
+    def __getitem__(self, index):
+        annotation = self.annotations[index]
+        img_name = self.imgs[index]
+        img = Image.open(self.img_path + "\\" + img_name)
+        if self.aug:
+            return self.aug(img), annotation
+        else:
+            return img, annotation
+
 
 def evaluate_accuracy(data_iter, net, device=torch.device('cuda' if torch.cuda.is_available() else 'cpu')):
     acc_sum, n = 0.0, 0
@@ -23,15 +60,15 @@ def trans_label_group_to_label(label_group):
     :param label_group:
     :return:
     """
-    labels_without_replic = list(set(label_group))
+    labels_to_label_group = list(set(label_group))
     label_dict = {}
     i = 0
-    for label_group_num in labels_without_replic:
+    for label_group_num in labels_to_label_group:
         label_dict[label_group_num] = i
         i += 1
     label = [label_dict[label_group_num] for label_group_num in label_group]
-    number_of_labels = len(labels_without_replic)
-    return torch.tensor(label), number_of_labels
+    number_of_labels = len(labels_to_label_group)
+    return torch.tensor(label), labels_to_label_group, number_of_labels
 
 # def data_iter(batch_size):
 
