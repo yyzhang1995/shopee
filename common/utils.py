@@ -7,35 +7,37 @@ import matplotlib.pyplot as plt
 
 
 class ShopeeData(Dataset):
-    def __init__(self, img_path, imgs, annotations, resize, aug=None):
+    def __init__(self, img_path, imgs, labels, resize, pre_trans=None, aug=None):
         self.img_path = img_path
         self.imgs = imgs
-        self.annotations = annotations
+        self.labels = labels
         self.aug = aug
         self.resize = resize
-        # features = []
-        # pre_trans = transforms.Compose([transforms.ToTensor(),
-        #                                 transforms.Resize((resize, resize))])
-        # for i in range(len(imgs)):
-        #     if (i + 1) % 1000 == 0: print("loaded " + str(i + 1) + " photo")
-        #     img = Image.open(img_path + "\\" + imgs[i]).copy()
-        #     if pre_transform:
-        #         features.append(pre_trans(img))
-        #     else:
-        #         features.append(transforms.ToTensor()(img))
-        # self.features = features
+        features = torch.zeros(size=(len(labels), 3, resize, resize))
+        if pre_trans is None:
+            pre_trans = transforms.Compose([
+                transforms.Resize((resize, resize)),
+                transforms.ToTensor()
+            ])
+        for i in range(len(imgs)):
+            if (i + 1) % 1000 == 0: print("loaded " + str(i + 1) + " photo")
+            img = Image.open(img_path + "\\" + imgs[i])
+            if pre_trans:
+                features[i] = pre_trans(img)
+            else:
+                features[i] = transforms.ToTensor()(img)
+        self.features = features
 
     def __len__(self):
         return len(self.imgs)
 
     def __getitem__(self, index):
-        annotation = self.annotations[index]
-        img_name = self.imgs[index]
-        img = Image.open(self.img_path + "\\" + img_name)
+        label = self.labels[index]
+        img = self.features[index]
         if self.aug:
-            return self.aug(img), annotation
+            return self.aug(img), label
         else:
-            return img, annotation
+            return img, label
 
 
 def evaluate_accuracy(data_iter, net, device=torch.device('cuda' if torch.cuda.is_available() else 'cpu')):
@@ -70,15 +72,12 @@ def trans_label_group_to_label(label_group):
     number_of_labels = len(labels_to_label_group)
     return torch.tensor(label), labels_to_label_group, number_of_labels
 
-# def data_iter(batch_size):
-
-
 # 清洗文本
-
 def _clean(s):
     res = re.sub(r"[^a-z]", " ", s)
     res = re.sub(r" +", " ", res).strip()
     return res
+
 
 def text_clean(text):
     """

@@ -4,7 +4,7 @@ from common.utils_text import to_onehot, grad_clipping, evaluate_text_accuracy, 
 from common.utils_load_text import load_text, data_iter_random
 import time
 import numpy as np
-
+# 可以尝试增加dropout
 
 class RNNModel(nn.Module):
     def __init__(self, rnn_layer, n_class):
@@ -102,8 +102,6 @@ top_n_matrix, top_n_confidence, y_true = top_n_accuracy(test_iter, model, 10, le
 top_n_matrix = torch.cat([y_true.view(-1, 1), top_n_matrix], dim=1)
 np.savetxt('result_model2_top_n_class_%s.txt' % timestamp.replace(':','_'), top_n_matrix.detach().numpy(), fmt='%d', delimiter=',')
 np.savetxt('result_model2_top_n_indices_%s.txt' % timestamp.replace(':','_'), top_n_confidence.detach().numpy(), fmt='%.10f', delimiter=',')
-
-
 
 
 def test():
