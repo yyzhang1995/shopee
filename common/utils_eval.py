@@ -10,8 +10,6 @@ def eval_model(pred_res, label, top):
     :return:
     """
     n = len(label)
-    print(pred_res[:, :top].shape)
-    print(label.shape)
     acc_num = (pred_res[:, :top] == label.view(-1, 1)).sum()
     top_n_acc = acc_num.item() / n
     # 构建混淆矩阵

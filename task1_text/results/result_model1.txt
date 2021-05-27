@@ -1,0 +1,82 @@
+Sun Apr 25 10:20:05 2021
+valid set number: 342
+accuracy: 59.064
+precision rate: 0.423
+recall rate: 0.425
+f1 score: 0.422Sun Apr 25 23:58:50 2021  valid set number: 62 
+accuracy: 75.806 
+precision rate: 0.613 
+recall rate: 0.607 
+f1 score: 0.609
+
+Mon Apr 26 00:00:12 2021  valid set number: 625 
+accuracy: 74.080 
+precision rate: 0.618 
+recall rate: 0.622 
+f1 score: 0.616 
+
+Thu May 27 09:56:52 2021
+valid set number: 625 
+accuracy: 76.960 
+precision rate: 0.649 
+recall rate: 0.665 
+f1 score: 0.652 
+
+Thu May 27 10:23:21 2021
+valid set number: 625 
+accuracy: 75.680 
+precision rate: 0.648 
+recall rate: 0.659 
+f1 score: 0.648 
+
+Thu May 27 10:25:53 2021
+valid set number: 625 
+accuracy: 80.480 
+precision rate: 0.646 
+recall rate: 0.805 
+f1 score: 0.684 
+
+Thu May 27 10:42:09 2021
+valid set number: 349 
+accuracy: 79.370 
+precision rate: 0.784 
+recall rate: 0.794 
+f1 score: 0.787 
+
+Thu May 27 10:42:26 2021
+valid set number: 349 
+accuracy: 79.370 
+precision rate: 0.784 
+recall rate: 0.794 
+f1 score: 0.787 
+
+Thu May 27 10:49:23 2021
+valid set number: 349 
+accuracy: 79.370 
+precision rate: 0.784 
+recall rate: 0.794 
+f1 score: 0.787 
+
+Thu May 27 10:50:18 2021
+valid set number: 349 
+accuracy: 79.370 
+precision rate: 0.784 
+recall rate: 0.794 
+f1 score: 0.787 
+
+Thu May 27 10:50:49 2021
+valid set number: 349
+tfidf: 1
+accuracy: 79.370 
+precision rate: 0.784 
+recall rate: 0.794 
+f1 score: 0.787 
+
+Thu May 27 11:03:32 2021
+valid set number: 349 
+tfidf: 0
+accuracy: 79.083 
+precision rate: 0.781 
+recall rate: 0.791 
+f1 score: 0.784 
+

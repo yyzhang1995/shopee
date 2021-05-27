@@ -4,6 +4,26 @@ from common.utils_text import to_onehot, grad_clipping, evaluate_text_accuracy, 
 from common.utils_load_text import load_text, data_iter_random
 import time
 import numpy as np
+import torch.nn.functional as F
+from torchvision import transforms
+from common.layers import GlobalAvgPool2d, FlattenLayer
+from common.utils import evaluate_accuracy
+from common.utils_load_image import load_data_image
+from common.utils_image import top_n_accuracy_image
+
+
+class MixModel(nn.Module):
+    def __init__(self, rnn, resnet):
+        super(MixModel, self).__init__()
+        self.rnn = rnn
+        self.resnet = resnet
+        self.dense = nn.Linear(2000, 2000)
+
+    def forward(self, X_img, X_text):
+        X1 = self.resnet(X_img)
+        X2 = self.rnn(X_text, state=None)[0]
+        output = self.dense(torch.cat((X1, X2)))
+        return output
 
 
 class RNNModel(nn.Module):
@@ -27,6 +47,57 @@ class RNNModel(nn.Module):
         return output, self.state
 
 
+class Residual(nn.Module):
+    def __init__(self, in_channels, out_channels, use_1x1conv=False, stride=1):
+        super(Residual, self).__init__()
+        self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1, stride=stride)
+        self.conv2 = nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1)
+        if use_1x1conv:
+            self.conv3 = nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=stride)
+        else:
+            self.conv3 = None
+        self.bn1 = nn.BatchNorm2d(out_channels)
+        self.bn2 = nn.BatchNorm2d(out_channels)
+
+    def forward(self, X):
+        Y = F.relu(self.bn1(self.conv1(X)))
+        Y = self.bn2(self.conv2(Y))
+        if self.conv3:
+            X = self.conv3(X)
+        return F.relu(X + Y)
+
+
+def resnet_block(in_channels, out_channels, num_residuals, first_block=False):
+    if first_block:
+        assert in_channels == out_channels
+    blk = []
+    for i in range(num_residuals):
+        if i == 0 and not first_block:
+            blk.append(Residual(in_channels, out_channels, use_1x1conv=True, stride=2))
+        else:
+            blk.append(Residual(out_channels, out_channels))
+    return nn.Sequential(*blk)
+
+
+res_net = nn.Sequential(
+    nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3),
+    nn.BatchNorm2d(64),
+    nn.ReLU(),
+    nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
+)
+
+res_net.add_module('resnet_block1', resnet_block(64, 64, 2, first_block=True))
+res_net.add_module('resnet_block2', resnet_block(64, 128, 2))
+res_net.add_module('resnet_block3', resnet_block(128, 256, 2))
+res_net.add_module('resnet_block4', resnet_block(256, 512, 2))
+res_net.add_module('global_avg_pool', GlobalAvgPool2d())
+res_net.add_module('fc',
+               nn.Sequential(
+                   FlattenLayer(),
+                   nn.Linear(512, 1000)
+               ))
+
+
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 batch_size, lr = 128, 0.001
 train_title_indices, train_labels, valid_title_indices, valid_labels,\
@@ -34,19 +105,15 @@ vocab_size, idx_to_char, char_to_idx, label_to_label_group, max_len = load_text(
 
 num_hiddens = 256
 rnn_layer = nn.RNN(input_size=vocab_size, hidden_size=num_hiddens)
-model = RNNModel(rnn_layer, n_class=2000)
+rnn_net = RNNModel(rnn_layer, n_class=1000)
 
-# 确保模型可以正常工作
-# for X, y in train_iter:
-#     X1, _ = model(X, None)
-#     print(X1.shape)
-#     break
+mixed_net = MixModel(rnn_net, res_net)
 
 loss = nn.CrossEntropyLoss()
-optimizer = optim.Adam(model.parameters(), lr=lr)
+optimizer = optim.Adam(mixed_net.parameters(), lr=lr)
 
 clipping_theta = 1e-2
-model = model.to(device)
+model = mixed_net.to(device)
 num_epochs = 250
 state = None
 train_loss_list, train_acc_list, test_acc_list = [], [], []
@@ -77,7 +144,7 @@ for epoch in range(num_epochs):
 # 存储top10的预测confidence score
 
 timestamp = time.asctime(time.localtime())
-with open(".\\results\\result_model2.txt", 'a') as f:
+with open("result_model2.txt", 'a') as f:
     f.write(timestamp + "\n")
     # 输出超参数
     f.write("batch_size : " + str(batch_size) + "\n")
@@ -102,18 +169,8 @@ with open(".\\results\\result_model2.txt", 'a') as f:
 test_iter = data_iter_random(valid_title_indices, valid_labels, batch_size=batch_size)
 top_n_matrix, top_n_confidence, y_true = top_n_accuracy(test_iter, model, 10, len(valid_labels))
 top_n_matrix = torch.cat([y_true.view(-1, 1), top_n_matrix], dim=1)
-np.savetxt('.\\results\\result_model2_top_n_class_%s.txt' % timestamp.replace(':','_'), top_n_matrix.detach().numpy(), fmt='%d', delimiter=',')
-np.savetxt('.\\results\\result_model2_top_n_indices_%s.txt' % timestamp.replace(':','_'), top_n_confidence.detach().numpy(), fmt='%.10f', delimiter=',')
-
-
-def test():
-    num_hiddens = 256
-    rnn_layer = nn.RNN(input_size=500, hidden_size=num_hiddens)
-    model = RNNModel(rnn_layer, 500)
-    X = torch.tensor([[1, 2, 3, 4, 5],
-                      [5, 6, 7, 8, 9]])
-    Y, state = model(X, None)
-    print(Y.shape)
+np.savetxt('result_model2_top_n_class_%s.txt' % timestamp.replace(':','_'), top_n_matrix.detach().numpy(), fmt='%d', delimiter=',')
+np.savetxt('result_model2_top_n_indices_%s.txt' % timestamp.replace(':','_'), top_n_confidence.detach().numpy(), fmt='%.10f', delimiter=',')
 
 
 if __name__ == '__main__':

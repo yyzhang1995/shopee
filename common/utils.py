@@ -1,5 +1,4 @@
 import torch, torchvision
-import re
 from torch.utils.data import Dataset
 from PIL import Image
 from torchvision import transforms
@@ -7,35 +6,37 @@ import matplotlib.pyplot as plt
 
 
 class ShopeeData(Dataset):
-    def __init__(self, img_path, imgs, labels, resize, pre_trans=None, aug=None):
+    def __init__(self, img_path, imgs, labels, resize, transforms=None, aug=None):
         self.img_path = img_path
         self.imgs = imgs
         self.labels = labels
         self.aug = aug
         self.resize = resize
-        features = torch.zeros(size=(len(labels), 3, resize, resize))
-        if pre_trans is None:
-            pre_trans = transforms.Compose([
-                transforms.Resize((resize, resize)),
-                transforms.ToTensor()
-            ])
-        for i in range(len(imgs)):
-            if (i + 1) % 1000 == 0: print("loaded " + str(i + 1) + " photo")
-            img = Image.open(img_path + "\\" + imgs[i])
-            if pre_trans:
-                features[i] = pre_trans(img)
-            else:
-                features[i] = transforms.ToTensor()(img)
-        self.features = features
+        self.transforms = transforms
+        # features = torch.zeros(size=(len(labels), 3, resize, resize))
+        # if pre_trans is None:
+        #     pre_trans = transforms.Compose([
+        #         transforms.Resize((resize, resize)),
+        #         transforms.ToTensor()
+        #     ])
+        # for i in range(len(imgs)):
+        #     if (i + 1) % 1000 == 0: print("loaded " + str(i + 1) + " photo")
+        #     img = Image.open(img_path + "\\" + imgs[i])
+        #     if pre_trans:
+        #         features[i] = pre_trans(img)
+        #     else:
+        #         features[i] = transforms.ToTensor()(img)
+        # self.features = features
 
     def __len__(self):
         return len(self.imgs)
 
     def __getitem__(self, index):
         label = self.labels[index]
-        img = self.features[index]
-        if self.aug:
-            return self.aug(img), label
+        img_id = self.imgs[index]
+        img = plt.imread(self.img_path + "\\" + img_id)
+        if self.transforms:
+            return self.transforms(img), label
         else:
             return img, label
 
@@ -72,47 +73,3 @@ def trans_label_group_to_label(label_group):
     number_of_labels = len(labels_to_label_group)
     return torch.tensor(label), labels_to_label_group, number_of_labels
 
-# 清洗文本
-def _clean(s):
-    res = re.sub(r"[^a-z]", " ", s)
-    res = re.sub(r" +", " ", res).strip()
-    return res
-
-
-def text_clean(text):
-    """
-    对文本进行清晰，去除掉标点符号、数字
-    :param text:
-    :return:
-    """
-    for i in range(len(text)):
-        text[i] = _clean(text[i])
-    return text
-
-
-def generate_matrix(title, min_word_len=2):
-    """
-    生成单词向量
-    :param title:
-    :param min_word_len:
-    :return:
-    """
-    # 先切分,并且去除掉长度小于2的单词
-    n = len(title) # n是样本的数目
-    title_split = []
-    ensemble = set()
-    word_order = {}
-    for t in title:
-        t_split = [tij for tij in t.split(" ") if len(tij) >= min_word_len]
-        title_split.append(t_split)
-        ensemble = ensemble | set(t_split)
-    w = len(ensemble)
-    i = 0
-    for word in ensemble:
-        word_order[word] = i
-        i += 1
-    word_matrix = torch.zeros(size=(n, w))
-    for i in range(n):
-        for word in title_split[i]:
-            word_matrix[i][word_order[word]] += 1
-    return word_matrix

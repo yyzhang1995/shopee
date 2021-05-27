@@ -4,26 +4,8 @@ import matplotlib.pyplot as plt
 import torchvision.transforms as transforms
 import time
 import numpy as np
-from common.utils import generate_matrix, trans_label_group_to_label, ShopeeData
+from common.utils import trans_label_group_to_label, ShopeeData
 import sys
-
-
-def load_title(fileroute):
-    train_csv = "..\\preliminary\\mini_train.csv"
-    with open(train_csv, 'r') as f:
-        reader = csv.reader(f)
-        data = [s for s in reader]
-        data[0:1] = []
-        title = [di[3].lower() for di in data]
-        label_group = [int(di[4]) for di in data]
-        label_group = torch.tensor(label_group)
-    return title, label_group
-
-
-def load_data_title():
-    file_route = r"E:\资料\模式识别\作业\大作业\shopee-product-matching"
-    title, label_group = load_title(file_route)
-    return title, label_group
 
 
 # -------------------------------------------------------------------------------------- #
@@ -184,6 +166,7 @@ if __name__ == '__main__':
         transforms.ToTensor(),
         transforms.Resize((224, 224))
     ])
+
     test_aug = transforms.ToTensor()
     train_iter, valid_iter = load_data_image(10, train_aug=train_aug, train_test_split=True)
     print(time.time() - start)
